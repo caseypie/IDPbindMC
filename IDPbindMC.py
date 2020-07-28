@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from scipy.special import softmax
+#from scipy.special import softmax
 import seq_list as sl
 import ChargedGaussian as cg
 import multiprocessing as mp
@@ -8,16 +8,21 @@ import multiprocessing as mp
 # Command: python IDP-IDP_GaussChain_MC [seqname1] [seqname2]
 
 
+def softmax(v):
+    A = np.exp(v - np.max(v))
+    return A/np.sum(A, axis=0)
 
-write_configs_to_file = False # write generated chain configurations to files or not
 
-T    = 1    # T = l/l_B = reduced temperature
-rD   = 3    # Debye screening length
+write_configs_to_file = True # write generated chain configurations to files or not
+
+T    = 1.    # T = l/l_B = reduced temperature
+rD   = 3.    # Debye screening length
+cut  = 0.    # short-range cutoff for monomer-monomer interaction
 
 Rmax    = 100  # Maximum distance between two chains
 n_R     = 100  # number of different R
 
-n_ch1s, n_ch2s = int(1e2), int(1e2) # number of chain configurations
+n_ch1s, n_ch2s = int(1e4), int(1e4) # number of chain configurations
 n_pairs = n_ch1s*n_ch2s
 
 # Import sequences
@@ -39,16 +44,23 @@ pool.close()
 
 # Store the configurations for possible later use
 if write_configs_to_file:
-    file1 = open( seqname1 + '_' + str(n_chain) + '_cogfigs.txt', 'a')
-    file2 = open( seqname2 + '_' + str(n_chain) + '_cogfigs.txt', 'a')
+    fname1 = seqname1 + '_' + str(n_ch1s) + '_cogfigs.txt'
+    fname2 = seqname2 + '_' + str(n_ch2s) + '_cogfigs.txt'
 
-    for i in range(n_chain):
-        np.savetxt(file1, chain1s[i].XYZ.T)
-        np.savetxt(file2, chain2s[i].XYZ.T)
-
+    file1 = open(fname1, 'w')
     file1.close()
-    file2.close()
+    file1 = open(fname1, 'a')
+    for i in range(n_ch1s):
+        np.savetxt(file1, chain1s[i].XYZ.T)
+    file1.close()
 
+
+    file2 = open(fname2, 'w')
+    file2.close()
+    file2 = open(fname2, 'a')
+    for i in range(n_ch2s):
+        np.savetxt(file2, chain2s[i].XYZ.T)
+    file2.close()
 
 # Boltzmann factor of a pair of chain configs with various R
 Rlist = np.linspace(1, Rmax, n_R)
@@ -95,4 +107,6 @@ B2V = 1 - QinterV
 
 print('B2V:', B2V)
 
-    
+f = open( 'B2V_' + seqname1 + '_' + seqname2 + '_T' + str(T) + '_rD' + str(rD) + '_cut' + str(cut) + '.txt', w ) 
+f.write('B2V:' + str(B2V) )
+f.close() 

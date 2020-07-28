@@ -22,7 +22,7 @@ class ChargedPolymer:
 # Interchain electric energy 
 # rD        = Debye screening length
 # R1diff = (dX1, dY1, dZ1) between the first monomers in the two polymers
-def Uel_inter( Poly1, Poly2, R1diff=(0,0,0), rD=3 ):  
+def Uel_inter( Poly1, Poly2, R1diff=(0,0,0), rD=3, short_cutoff=0 ):  
     N1, N2 = Poly1.N, Poly2.N
     XYZ1, XYZ2 = Poly1.XYZ, Poly2.XYZ
     
@@ -33,14 +33,14 @@ def Uel_inter( Poly1, Poly2, R1diff=(0,0,0), rD=3 ):
 
     SIGMA = np.tile(Poly1.sig,(N2,1)).T * np.tile(Poly2.sig,(N1,1))
    
-    nRsmall = np.where(Rdiff < 1)[0].shape[0] 
+    nRsmall = np.where(Rdiff < short_cutoff)[0].shape[0]
     U = np.sum( SIGMA * np.exp(-Rdiff/rD)/Rdiff )*(nRsmall==0) + 1e20*( nRsmall>0 )
 
     return U
 
 # Intrachain electric energy 
 # rD        = Debye screening length
-def Uel_intra( Poly, rD=3 ): 
+def Uel_intra( Poly, rD=3, short_cutoff=0 ): 
     N, XYZ, sig = Poly.N, Poly.XYZ, Poly.sig
     Xa = np.tile(XYZ[:,0],(N,1))
     Ya = np.tile(XYZ[:,1],(N,1))
@@ -54,7 +54,9 @@ def Uel_intra( Poly, rD=3 ):
     SIGMA = Sa.T * Sa
 
     Id = np.identity(N)
-    U = 0.5*np.sum( SIGMA * np.exp(-Rdiff/rD)/ ( Rdiff + Id) * (np.ones((N,N)) - Id) )
+    Rdiff += Id
+    nRsmall = np.where(Rdiff < short_cutoff )[0].shape[0]
+    U = 0.5*np.sum( SIGMA * np.exp(-Rdiff/rD)/Rdiff * (np.ones((N,N)) - Id) )
 
     return U
     
