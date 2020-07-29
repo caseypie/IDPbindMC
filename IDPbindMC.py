@@ -42,7 +42,7 @@ t = time.perf_counter()
 
 pool = mp.Pool(processes=40) 
 chain1s = pool.map(PolyGen1,range(n_ch1s))
-chain2s = pool.map(PolyGen1,range(n_ch2s))
+chain2s = pool.map(PolyGen2,range(n_ch2s))
 pool.close() 
 
 # Store the configurations for possible later use
