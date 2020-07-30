@@ -25,10 +25,10 @@ write_configs_to_file = True # write generated chain configurations to files or 
 
 T    = 1.    # T = l/l_B = reduced temperature
 rD   = 3.    # Debye screening length
-cut  = 0.    # short-range cutoff for monomer-monomer interaction
+cut  = 0.1    # short-range cutoff for monomer-monomer interaction
 
-Rmax    = 100  # Maximum distance between two chains
-n_R     = 100  # number of different R
+Rmax = 100  # Maximum distance between two chains
+n_R  = 100  # number of different R
 
 n_ch1s, n_ch2s = int(1e4), int(1e4) # number of chain configurations
 n_pairs = n_ch1s*n_ch2s
@@ -48,13 +48,13 @@ if rank == 0:
     def PolyGen1(_): 
         np.random.seed()  
         poly  = cg.ChargedPolymer(sig1)
-        U     = cg.Uel_intra( poly, rD=rD )
+        U     = cg.Uel_intra( poly, rD=rD , short_cutoff=cut)
         return poly, U
 
     def PolyGen2(_):
         np.random.seed()
         poly  = cg.ChargedPolymer(sig2)
-        U     = cg.Uel_intra( poly, rD=rD )
+        U     = cg.Uel_intra( poly, rD=rD, short_cutoff=cut )
         return poly, U
 
     t = time.perf_counter()
@@ -128,7 +128,7 @@ def Minter_fixed_configs( n12 ):
 
     for R in Rlist:        
         R1 = (0,0,R)
-        U12 = cg.Uel_inter( ch1, ch2, R1diff=R1, rD=rD )
+        U12 = cg.Uel_inter( ch1, ch2, R1diff=R1, rD=rD, short_cutoff=cut )
         Uall.append( U12 )
 
     M12_config_fixed = ( np.exp(-np.array(Uall)/T) - 1 ).dot(Rlist*Rlist)/np.sum( Rlist*Rlist ) 
@@ -154,7 +154,7 @@ M12_configs = comm.gather( M12_configs_sendbuf, root=0  )
 
 # Final handling in rank=0
 if rank==0:
-    M12_configs = np.concatenate(M12_configs)  
+    M12 = np.concatenate(M12_configs).reshape((n_ch1s, n_ch2s))  
 
     """
     MM  = np.zeros(n_pairs)
@@ -166,7 +166,12 @@ if rank==0:
     P1 = softmax( ( -np.array(U1) +np.min(U1) )/T )
     P2 = softmax( ( -np.array(U2) +np.min(U2) )/T )
  
-    MinterV = P1.dot( M12_configs.reshape((n_ch1s, n_ch2s)).dot(P2) )
+    np.savetxt('P1.txt', P1 )  
+    np.savetxt('P2.txt', P2 )  
+    np.savetxt('M12.txt', M12)
+
+
+    MinterV = P1.dot( M12.dot(P2) )
  
     B2V =  -MinterV 
 
